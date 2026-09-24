@@ -1,0 +1,35 @@
+[project]
+name = "wtpdf"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "mdorn", email = "matt.dorn@datadoghq.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "chromadb>=1.5.9",
+    "langchain>=1.4.2",
+    "langchain-chroma>=1.1.0",
+    "langchain-classic>=1.0.8",
+    "langchain-community>=0.4.2",
+    "langchain-ollama>=1.1.0",
+    "langchain-openai>=1.6.6",
+    "langchain-text-splitters>=1.1.2",
+    "ollama>=0.6.2",
+    "openai>=3.19.2",
+    "pypdf>=6.19.0",
+    "streamlit>=1.64.0",
+]
+
+[project.scripts]
+wtpdf = "wtpdf:main"
+
+[build-system]
+requires = ["uv_build>=0.12.15,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.8",
+]
