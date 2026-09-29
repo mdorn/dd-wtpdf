@@ -70,6 +70,36 @@ uv run python demo/make_sensitive_pdf.py   # writes demo/hr_records.pdf (fake da
 3. Ask the same question about `hr_records.pdf` in hardened mode to see the masked
    values.
 
+## Run with Docker + Datadog (APM and AI Guard)
+
+`docker-compose.yml` runs the app under `ddtrace-run` next to a Datadog Agent. The
+`ddtrace` LangChain integration sends every model call (including the retrieved PDF
+context in the system message) to AI Guard, with no changes to the app code.
+
+One-time Datadog setup ([AI Guard docs](https://docs.datadoghq.com/security/ai_guard/)):
+
+1. AI Guard is in Preview: ask Datadog to enable it for your org.
+2. Create an API key and an application key with the `ai_guard_evaluate` scope.
+3. Create an APM retention filter: query `resource_name:ai_guard`, 100% spans and traces.
+4. Security > AI Guard > Settings > Services: set the blocking policy for the
+   `wtpdf` service. Blocked calls raise `AIGuardAbortError`. Set `DD_AI_GUARD_BLOCK=false`
+   in `.env` to force monitor-only.
+
+Then:
+
+```
+cp .env.example .env   # fill in DD_API_KEY, DD_APP_KEY, and OPENAI_API_KEY if used
+docker compose up --build
+```
+
+Open http://localhost:8501. Traces appear in APM under service `wtpdf`, and
+evaluations under Security > AI Guard. Try `demo/injected_visible.pdf` with vulnerable
+mode on.
+
+Ollama must be running on the host and reachable from the container (the compose
+file maps `host.docker.internal` to the host; override with `OLLAMA_HOST`). If it
+only listens on 127.0.0.1, start it with `OLLAMA_HOST=0.0.0.0 ollama serve`.
+
 ## Run
 
 ```

@@ -1,0 +1,13 @@
+.venv
+.git
+.claude
+.agents
+.env
+.DS_Store
+__pycache__
+*.py[oc]
+tests
+demo
+.pytest_cache
+.coverage
+htmlcov

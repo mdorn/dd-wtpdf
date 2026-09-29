@@ -17,3 +17,6 @@ wheels/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Local secrets
+.env

@@ -1,0 +1,36 @@
+services:
+  datadog-agent:
+    image: gcr.io/datadoghq/agent:7
+    environment:
+      DD_API_KEY: ${DD_API_KEY:?set DD_API_KEY in .env}
+      DD_SITE: ${DD_SITE:-datadoghq.com}
+      DD_HOSTNAME: wtpdf-demo
+      DD_APM_ENABLED: "true"
+      DD_APM_NON_LOCAL_TRAFFIC: "true"
+
+  app:
+    build: .
+    ports:
+      - "8501:8501"
+    depends_on:
+      - datadog-agent
+    env_file: .env
+    environment:
+      DD_AGENT_HOST: datadog-agent
+      DD_SERVICE: wtpdf
+      DD_ENV: ${DD_ENV:-demo}
+      DD_TRACE_ENABLED: "true"
+      DD_AI_GUARD_ENABLED: "true"
+      DD_LLMOBS_ENABLED: "true"
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"
+      interval: 15s
+      timeout: 5s
+      retries: 5
