@@ -12,3 +12,8 @@ wheels/
 # Symlinks created by streamlit into .venv
 .agents/
 .claude/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/

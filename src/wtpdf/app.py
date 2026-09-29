@@ -13,6 +13,12 @@ with st.sidebar:
     st.header("Settings")
     backend = st.selectbox("LLM backend", [OPENAI, OLLAMA])
     model = st.text_input("Model", value=DEFAULT_MODELS[backend])
+    vulnerable = st.checkbox(
+        "Vulnerable mode (LLM01 demo)",
+        value=True,
+        help="Intentionally unsafe prompt: PDF text is treated as system "
+        "instructions. Uncheck to use the hardened prompt.",
+    )
 
     if backend == OPENAI and not os.environ.get("OPENAI_API_KEY"):
         st.error("OPENAI_API_KEY is not set in the environment.")
@@ -61,7 +67,9 @@ else:
         with st.chat_message("assistant"):
             try:
                 chat_model = get_chat_model(backend, model)
-                chain = build_rag_chain(chat_model, st.session_state.retriever)
+                chain = build_rag_chain(
+                    chat_model, st.session_state.retriever, vulnerable=vulnerable
+                )
                 result = chain.invoke({"input": question})
                 answer = result["answer"]
                 st.markdown(answer)

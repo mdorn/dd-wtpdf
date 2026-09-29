@@ -11,6 +11,7 @@ OLLAMA = "Ollama"
 DEFAULT_MODELS = {
     OPENAI: "gpt-4o-mini",
     OLLAMA: "llama3.1",
+    # OLLAMA: "gemma4:26b",
 }
 
 DEFAULT_EMBEDDING_MODELS = {

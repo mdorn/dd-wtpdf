@@ -31,5 +31,18 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "coverage>=7.16.1",
+    "pytest>=9.1.1",
+    "reportlab>=5.0.1",
     "ruff>=0.16.8",
+]
+
+[tool.coverage.run]
+source = ["src/wtpdf"]
+concurrency = ["thread"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
 ]
