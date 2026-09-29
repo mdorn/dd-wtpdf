@@ -1,3 +1,5 @@
+import re
+
 from langchain_chroma import Chroma
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_classic.chains.retrieval import create_retrieval_chain
@@ -47,14 +49,42 @@ HARDENED_QA_PROMPT = ChatPromptTemplate.from_messages(
 )
 
 
-def load_and_split(pdf_path: str) -> list[Document]:
+# Hardened mode only. Regexes are enough for a demo; production would use a real
+# PII detector such as Presidio.
+PII_PATTERNS = {
+    "SSN": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
+    "CARD": re.compile(r"\b(?:\d{4}[ -]?){3}\d{4}\b"),
+    "EMAIL": re.compile(r"\b[\w.+-]+@[\w-]+(?:\.[\w-]+)+\b"),
+    "PHONE": re.compile(r"\(?\b\d{3}\)?[ .-]\d{3}[ .-]\d{4}\b"),
+}
+
+
+def redact_pii(text: str) -> str:
+    for label, pattern in PII_PATTERNS.items():
+        text = pattern.sub(f"[REDACTED {label}]", text)
+    return text
+
+
+def load_and_split(pdf_path: str, redact: bool = False) -> list[Document]:
     pages = PyPDFLoader(pdf_path).load()
+    if redact:
+        for page in pages:
+            page.page_content = redact_pii(page.page_content)
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     return splitter.split_documents(pages)
 
 
-def build_vectorstore(docs: list[Document], embeddings: Embeddings) -> Chroma:
-    return Chroma.from_documents(docs, embedding=embeddings)
+# INTENTIONALLY VULNERABLE (OWASP LLM02 demo): with no collection_name, every upload
+# from every session lands in one shared Chroma collection, and every retriever
+# searches all of it. Hardened mode passes a per-session collection name instead.
+def build_vectorstore(
+    docs: list[Document], embeddings: Embeddings, collection_name: str | None = None
+) -> Chroma:
+    if collection_name is None:
+        return Chroma.from_documents(docs, embedding=embeddings)
+    return Chroma.from_documents(
+        docs, embedding=embeddings, collection_name=collection_name
+    )
 
 
 def build_rag_chain(

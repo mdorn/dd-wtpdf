@@ -35,3 +35,15 @@ def test_app_no_warning_for_ollama_backend(monkeypatch: pytest.MonkeyPatch) -> N
     assert not at.exception
     assert len(at.error) == 0
     assert at.text_input[0].value == "llama3.1"
+
+
+def test_app_vulnerable_mode_checkbox_defaults_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    at = AppTest.from_file(APP_PATH)
+    at.run()
+
+    assert not at.exception
+    assert at.checkbox[0].label == "Vulnerable mode (OWASP demo)"
+    assert at.checkbox[0].value is True

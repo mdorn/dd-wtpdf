@@ -11,6 +11,7 @@ from wtpdf.rag import (
     build_rag_chain,
     build_vectorstore,
     load_and_split,
+    redact_pii,
 )
 
 
@@ -81,3 +82,60 @@ def test_build_rag_chain_supports_hardened_mode() -> None:
     chain = build_rag_chain(chat_model, vectorstore.as_retriever(), vulnerable=False)
 
     assert chain.invoke({"input": "What is wtpdf?"})["answer"] == "ok"
+
+
+def test_redact_pii_masks_each_type() -> None:
+    text = (
+        "SSN 900-12-3456, card 4111 1111 1111 1111, mail a@example.com, "
+        "call (555) 010-2001."
+    )
+    redacted = redact_pii(text)
+
+    for secret in ("900-12-3456", "4111", "a@example.com", "010-2001"):
+        assert secret not in redacted
+    for label in ("SSN", "CARD", "EMAIL", "PHONE"):
+        assert f"[REDACTED {label}]" in redacted
+
+
+def test_redact_pii_leaves_normal_text_alone() -> None:
+    text = "Revenue grew 12% in 2025 across 3 regions."
+    assert redact_pii(text) == text
+
+
+def test_load_and_split_redacts_when_asked(tmp_path: Path) -> None:
+    from conftest import _build_pdf_bytes
+
+    pdf = tmp_path / "pii.pdf"
+    pdf.write_bytes(_build_pdf_bytes("SSN 900-12-3456 on file"))
+
+    assert "900-12-3456" in load_and_split(str(pdf))[0].page_content
+    assert "900-12-3456" not in load_and_split(str(pdf), redact=True)[0].page_content
+
+
+def test_default_vectorstore_is_shared_across_callers() -> None:
+    embeddings = DeterministicFakeEmbedding(size=32)
+    secret = Document(page_content="cross-session-canary-alpha", metadata={"page": 0})
+    build_vectorstore([secret], embeddings)  # "session A"
+    other = build_vectorstore(
+        [Document(page_content="unrelated", metadata={"page": 0})], embeddings
+    )  # "session B"
+
+    found = [d.page_content for d in other.similarity_search("canary", k=10)]
+    assert "cross-session-canary-alpha" in found
+
+
+def test_named_collections_are_isolated() -> None:
+    embeddings = DeterministicFakeEmbedding(size=32)
+    build_vectorstore(
+        [Document(page_content="isolated-canary-beta", metadata={"page": 0})],
+        embeddings,
+        collection_name="test-session-a",
+    )
+    other = build_vectorstore(
+        [Document(page_content="unrelated", metadata={"page": 0})],
+        embeddings,
+        collection_name="test-session-b",
+    )
+
+    found = [d.page_content for d in other.similarity_search("canary", k=10)]
+    assert "isolated-canary-beta" not in found
